@@ -3,6 +3,6 @@
 
 ### Как пользоваться
 Скачать код html
-<a href="https://github.com/nokrolikno/Crossword-Editor/blob/master/crossword.html" download>
+<a href="https://raw.githubusercontent.com/nokrolikno/Crossword-Editor/refs/heads/master/crossword.html" download>
   <button>Скачать файл</button>
 </a>
