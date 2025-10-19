@@ -16,7 +16,6 @@
   }
 
   h1 { margin: 0 0 12px 0; font-size: 20px; }
-
   #setup { margin-bottom: 12px; }
 
   #grid {
@@ -80,182 +79,204 @@
     color: white;
     cursor: pointer;
   }
-  button.secondary {
-    background: #6c757d;
-  }
-  button.gray {
-    background: #888;
-  }
+  button.secondary { background: #6c757d; }
+  button.gray { background: #888; }
+
+  #footer-options { margin-top:10px; }
 </style>
 </head>
 <body>
-  <h1>Конструктор кроссвордов</h1>
+<h1>Конструктор кроссвордов</h1>
 
-  <div id="setup">
-    <label>Размер поля:</label>
-    <input id="rows" type="number" min="1" max="40" placeholder="Строки" value="10">
-    ×
-    <input id="cols" type="number" min="1" max="40" placeholder="Столбцы" value="10">
-    <button id="create">Создать</button>
-    <div id="controls" style="display:inline-flex">
-      <button id="clear" class="secondary">Очистить содержимое</button>
-      <button id="save-png">Сохранить как PNG</button>
-      <button id="save-cross" class="gray">Сохранить .cross</button>
-      <button id="load-cross" class="gray">Загрузить .cross</button>
-    </div>
+<div id="setup">
+  <label>Размер поля:</label>
+  <input id="rows" type="number" min="1" max="40" placeholder="Строки" value="10">
+  ×
+  <input id="cols" type="number" min="1" max="40" placeholder="Столбцы" value="10">
+  <button id="create">Создать</button>
+  <div id="controls" style="display:inline-flex">
+    <button id="clear" class="secondary">Очистить содержимое</button>
+    <button id="save-png">Сохранить как PNG</button>
+    <button id="save-cross" class="gray">Сохранить .cross</button>
+    <button id="load-cross" class="gray">Загрузить .cross</button>
   </div>
+</div>
 
-  <div id="grid"></div>
+<div id="grid"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script>
-    const grid = document.getElementById('grid');
-    const createBtn = document.getElementById('create');
-    const savePngBtn = document.getElementById('save-png');
-    const saveCrossBtn = document.getElementById('save-cross');
-    const loadCrossBtn = document.getElementById('load-cross');
-    const clearBtn = document.getElementById('clear');
+<div id="footer-options">
+  <label><input type="checkbox" id="include-link" checked> Оставить ссылку на ресурс</label>
+</div>
 
-    let rows = 0, cols = 0;
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+const grid = document.getElementById('grid');
+const createBtn = document.getElementById('create');
+const savePngBtn = document.getElementById('save-png');
+const saveCrossBtn = document.getElementById('save-cross');
+const loadCrossBtn = document.getElementById('load-cross');
+const clearBtn = document.getElementById('clear');
+const includeLinkCheckbox = document.getElementById('include-link');
 
-    createBtn.addEventListener('click', () => {
-      rows = parseInt(document.getElementById('rows').value, 10) || 0;
-      cols = parseInt(document.getElementById('cols').value, 10) || 0;
-      if (rows <= 0 || cols <= 0) { alert('Введите корректные размеры'); return; }
-      buildGrid(rows, cols);
-    });
+let rows = 0, cols = 0;
 
-    clearBtn.addEventListener('click', () => {
-      grid.querySelectorAll('.cell-input').forEach(inp => inp.value = '');
-      grid.querySelectorAll('.cell').forEach(c => c.classList.remove('word-cell'));
-      grid.querySelectorAll('.letter').forEach(l => l.textContent = '');
-    });
+createBtn.addEventListener('click', () => {
+  rows = parseInt(document.getElementById('rows').value, 10) || 0;
+  cols = parseInt(document.getElementById('cols').value, 10) || 0;
+  if (rows <= 0 || cols <= 0) { alert('Введите корректные размеры'); return; }
+  buildGrid(rows, cols);
+});
 
-    function buildGrid(r, c) {
-      grid.innerHTML = '';
-      rows = r;
-      cols = c;
-      grid.style.gridTemplateRows = `repeat(${r}, 40px)`;
-      grid.style.gridTemplateColumns = `repeat(${c}, 40px)`;
+clearBtn.addEventListener('click', () => {
+  grid.querySelectorAll('.cell-input').forEach(inp => inp.value = '');
+  grid.querySelectorAll('.cell').forEach(c => c.classList.remove('word-cell'));
+  grid.querySelectorAll('.letter').forEach(l => l.textContent = '');
+});
 
-      for (let i = 0; i < r * c; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
+function buildGrid(r, c) {
+  grid.innerHTML = '';
+  rows = r;
+  cols = c;
+  grid.style.gridTemplateRows = `repeat(${r}, 40px)`;
+  grid.style.gridTemplateColumns = `repeat(${c}, 40px)`;
 
-        const letterEl = document.createElement('div');
-        letterEl.className = 'letter';
+  for (let i = 0; i < r * c; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const letterEl = document.createElement('div');
+    letterEl.className = 'letter';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'cell-input';
+    input.maxLength = 4;
+    input.autocomplete = 'off';
 
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'cell-input';
-        input.maxLength = 4;
-        input.autocomplete = 'off';
+    input.addEventListener('input', () => {
+      const val = input.value.trim();
+      const hasLetter = /[A-Za-zА-Яа-яЁё]/.test(val);
+      const hasDigit = /^\d+$/.test(val);
 
-        input.addEventListener('input', () => {
-          const val = input.value.trim();
-          const hasLetter = /[A-Za-zА-Яа-яЁё]/.test(val);
-          const hasDigit = /^\d+$/.test(val);
-
-          if (hasLetter) {
-            const firstLetterMatch = val.match(/[A-Za-zА-Яа-яЁё]/);
-            letterEl.textContent = firstLetterMatch ? firstLetterMatch[0].toUpperCase() : '';
-            cell.classList.add('word-cell');
-            input.style.fontSize = '0px';
-          } else if (hasDigit && val.length > 0) {
-            letterEl.textContent = val;
-            cell.classList.remove('word-cell');
-            input.style.fontSize = '0px';
-          } else {
-            letterEl.textContent = '';
-            cell.classList.remove('word-cell');
-            input.style.fontSize = '18px';
-          }
-        });
-
-        input.addEventListener('focus', () => { input.style.background = '#fff5b1'; });
-        input.addEventListener('blur', () => { input.style.background = 'transparent'; input.dispatchEvent(new Event('input')); });
-
-        cell.appendChild(letterEl);
-        cell.appendChild(input);
-        grid.appendChild(cell);
+      if (hasLetter) {
+        const firstLetterMatch = val.match(/[A-Za-zА-Яа-яЁё]/);
+        letterEl.textContent = firstLetterMatch ? firstLetterMatch[0].toUpperCase() : '';
+        cell.classList.add('word-cell');
+        input.style.fontSize = '0px';
+      } else if (hasDigit && val.length > 0) {
+        letterEl.textContent = val;
+        cell.classList.remove('word-cell');
+        input.style.fontSize = '0px';
+      } else {
+        letterEl.textContent = '';
+        cell.classList.remove('word-cell');
+        input.style.fontSize = '18px';
       }
-    }
+    });
 
-    // Сохранение PNG
-    savePngBtn.addEventListener('click', async () => {
-      const originalBg = grid.style.background;
-      const originalBorder = grid.style.border;
+    input.addEventListener('focus', () => { input.style.background = '#fff5b1'; });
+    input.addEventListener('blur', () => { input.style.background = 'transparent'; input.dispatchEvent(new Event('input')); });
 
-      grid.style.border = 'none';
-      grid.style.background = '#ffffff';
+    cell.appendChild(letterEl);
+    cell.appendChild(input);
+    grid.appendChild(cell);
+  }
+}
 
-      const emptyCells = Array.from(grid.querySelectorAll('.cell:not(.word-cell)'));
-      emptyCells.forEach(cell => cell.style.borderColor = 'transparent');
+// Сохранение PNG
+savePngBtn.addEventListener('click', async () => {
+  const emptyCells = Array.from(grid.querySelectorAll('.cell:not(.word-cell)'));
+  emptyCells.forEach(cell => cell.style.borderColor = 'transparent');
 
+  // временный контейнер с белым фоном
+  const tempContainer = document.createElement('div');
+  tempContainer.style.background = '#fff';
+  tempContainer.style.display = 'inline-block';
+  tempContainer.style.padding = '10px';
+
+  // клонируем grid
+  const gridClone = grid.cloneNode(true);
+  gridClone.style.border = 'none'; // убираем рамку вокруг всего grid
+  tempContainer.appendChild(gridClone);
+
+  // текст под grid
+  if (includeLinkCheckbox.checked) {
+    const footer = document.createElement('div');
+    footer.style.width = '100%';
+    footer.style.textAlign = 'center';
+    footer.style.fontSize = '14px';
+    footer.style.fontFamily = 'Arial';
+    footer.style.marginTop = '10px';
+    footer.style.background = '#fff';
+    footer.style.border = 'none';
+    footer.textContent = 'Выполнено с помощью ресурса https://github.com/nokrolikno/Crossword-Editor';
+    tempContainer.appendChild(footer);
+  }
+
+  document.body.appendChild(tempContainer);
+  try {
+    const canvas = await html2canvas(tempContainer, { scale: 3, backgroundColor: '#ffffff' });
+    const link = document.createElement('a');
+    link.download = 'crossword.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } finally {
+    emptyCells.forEach(cell => cell.style.borderColor = '#ccc');
+    tempContainer.remove();
+  }
+});
+
+// Сохранение .cross
+saveCrossBtn.addEventListener('click', () => {
+  const cells = Array.from(grid.querySelectorAll('.cell'));
+  const data = {
+    rows,
+    cols,
+    cells: cells.map(cell => cell.querySelector('.letter').textContent.trim() || '')
+  };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.download = 'crossword.cross';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+// Загрузка .cross
+loadCrossBtn.addEventListener('click', () => {
+  const inputFile = document.createElement('input');
+  inputFile.type = 'file';
+  inputFile.accept = '.cross';
+  inputFile.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
       try {
-        const canvas = await html2canvas(grid, { scale: 3, backgroundColor: '#ffffff' });
-        const link = document.createElement('a');
-        link.download = 'crossword.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-      } finally {
-        emptyCells.forEach(cell => cell.style.borderColor = '#ccc');
-        grid.style.border = originalBorder;
-        grid.style.background = originalBg;
+        const data = JSON.parse(reader.result);
+        if (!data.rows || !data.cols || !data.cells) throw new Error('Неверный формат файла');
+
+        // Обновляем поля ввода размеров
+        document.getElementById('rows').value = data.rows;
+        document.getElementById('cols').value = data.cols;
+
+        buildGrid(data.rows, data.cols);
+        const cells = Array.from(grid.querySelectorAll('.cell'));
+        data.cells.forEach((val, i) => {
+          const input = cells[i].querySelector('input');
+          input.value = val;
+          input.dispatchEvent(new Event('input'));
+        });
+      } catch (err) {
+        alert('Ошибка загрузки: ' + err);
       }
-    });
+    };
+    reader.readAsText(file);
+  });
+  inputFile.click();
+});
 
-    // Сохранение .cross
-    saveCrossBtn.addEventListener('click', () => {
-      const cells = Array.from(grid.querySelectorAll('.cell'));
-      const data = {
-        rows,
-        cols,
-        cells: cells.map(cell => {
-          const val = cell.querySelector('.letter').textContent.trim();
-          return val.length ? val : '';
-        })
-      };
-      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-      const link = document.createElement('a');
-      link.download = 'crossword.cross';
-      link.href = URL.createObjectURL(blob);
-      link.click();
-      URL.revokeObjectURL(link.href);
-    });
-
-    // Загрузка .cross
-    loadCrossBtn.addEventListener('click', () => {
-      const inputFile = document.createElement('input');
-      inputFile.type = 'file';
-      inputFile.accept = '.cross';
-      inputFile.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const data = JSON.parse(reader.result);
-            if (!data.rows || !data.cols || !data.cells) throw new Error('Неверный формат файла');
-            buildGrid(data.rows, data.cols);
-            const cells = Array.from(grid.querySelectorAll('.cell'));
-            data.cells.forEach((val, i) => {
-              const input = cells[i].querySelector('input');
-              input.value = val;
-              input.dispatchEvent(new Event('input'));
-            });
-          } catch (err) {
-            alert('Ошибка загрузки: ' + err);
-          }
-        };
-        reader.readAsText(file);
-      });
-      inputFile.click();
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-      buildGrid(10, 10);
-    });
-  </script>
+document.addEventListener('DOMContentLoaded', () => {
+  buildGrid(10, 10);
+});
+</script>
 </body>
 </html>
