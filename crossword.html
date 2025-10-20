@@ -18,6 +18,12 @@
   h1 { margin: 0 0 12px 0; font-size: 20px; }
   #setup { margin-bottom: 12px; }
 
+  #grid-container {
+    position: relative;
+    display: inline-block;
+    margin: 40px 0;
+  }
+
   #grid {
     display: grid;
     background: #fff;
@@ -78,9 +84,47 @@
     background: #1976d2;
     color: white;
     cursor: pointer;
+    transition: background 0.2s;
   }
+  button:hover { background: #1565c0; }
   button.secondary { background: #6c757d; }
   button.gray { background: #888; }
+
+  .plus-minus-btn {
+    background: #e0e0e0;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: absolute;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .plus-minus-btn:hover {
+    background: #d5d5d5;
+    transform: scale(1.1);
+  }
+
+  .plus-minus-btn img {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Расположение кнопок вокруг кроссворда */
+  #btn-top-plus { top: -40px; left: 50%; transform: translateX(-50%); }
+  #btn-top-minus { top: -40px; left: calc(50% + 40px); transform: translateX(-50%); }
+
+  #btn-bottom-plus { bottom: -40px; left: 50%; transform: translateX(-50%); }
+  #btn-bottom-minus { bottom: -40px; left: calc(50% + 40px); transform: translateX(-50%); }
+
+  #btn-left-plus { left: -40px; top: 50%; transform: translateY(-50%); }
+  #btn-left-minus { left: -40px; top: calc(50% + 40px); transform: translateY(-50%); }
+
+  #btn-right-plus { right: -40px; top: 50%; transform: translateY(-50%); }
+  #btn-right-minus { right: -40px; top: calc(50% + 40px); transform: translateY(-50%); }
 
   #footer-options { margin-top:10px; }
 </style>
@@ -102,7 +146,22 @@
   </div>
 </div>
 
-<div id="grid"></div>
+<div id="grid-container">
+  <div id="grid"></div>
+
+  <!-- Кнопки добавления и удаления строк/столбцов -->
+  <button class="plus-minus-btn" id="btn-top-plus"><img src="src/plus.png"></button>
+  <button class="plus-minus-btn" id="btn-top-minus"><img src="src/minus.png"></button>
+
+  <button class="plus-minus-btn" id="btn-bottom-plus"><img src="src/plus.png"></button>
+  <button class="plus-minus-btn" id="btn-bottom-minus"><img src="src/minus.png"></button>
+
+  <button class="plus-minus-btn" id="btn-left-plus"><img src="src/plus.png"></button>
+  <button class="plus-minus-btn" id="btn-left-minus"><img src="src/minus.png"></button>
+
+  <button class="plus-minus-btn" id="btn-right-plus"><img src="src/plus.png"></button>
+  <button class="plus-minus-btn" id="btn-right-minus"><img src="src/minus.png"></button>
+</div>
 
 <div id="footer-options">
   <label><input type="checkbox" id="include-link" checked> Оставить ссылку на ресурс</label>
@@ -133,7 +192,7 @@ clearBtn.addEventListener('click', () => {
   grid.querySelectorAll('.letter').forEach(l => l.textContent = '');
 });
 
-function buildGrid(r, c) {
+function buildGrid(r, c, prevCells = []) {
   grid.innerHTML = '';
   rows = r;
   cols = c;
@@ -178,26 +237,82 @@ function buildGrid(r, c) {
     cell.appendChild(letterEl);
     cell.appendChild(input);
     grid.appendChild(cell);
+
+    if (prevCells[i]) {
+      input.value = prevCells[i];
+      input.dispatchEvent(new Event('input'));
+    }
   }
 }
+
+// Сохранение текущего состояния
+function saveCurrentState() {
+  return Array.from(grid.querySelectorAll('.cell .letter')).map(l => l.textContent);
+}
+
+// Функция обновления сетки с разным типом добавления
+function updateGrid(newRows, newCols, mode) {
+  const oldData = saveCurrentState();
+  const newData = [];
+
+  if (mode === 'add-top') {
+    for (let c = 0; c < cols; c++) newData.push('');
+  }
+
+  for (let r = 0; r < rows; r++) {
+    let row = [];
+    for (let c = 0; c < cols; c++) row.push(oldData[r * cols + c] || '');
+
+    if (mode === 'add-left') row.unshift('');
+    if (mode === 'add-right') row.push('');
+    newData.push(...row);
+
+    if (mode === 'add-bottom' && r === rows - 1) {
+      for (let c = 0; c < cols; c++) newData.push('');
+    }
+  }
+
+  if (mode === 'remove-top') oldData.splice(0, cols);
+  if (mode === 'remove-bottom') oldData.splice(-cols);
+  if (mode === 'remove-left' || mode === 'remove-right') {
+    for (let r = 0; r < rows; r++) {
+      if (mode === 'remove-left') oldData.splice(r * (cols - 1), 1);
+      else oldData.splice(r * cols + (cols - 1 - r), 1);
+    }
+  }
+
+  const finalData = (mode.startsWith('remove')) ? oldData : newData;
+
+  buildGrid(newRows, newCols, finalData);
+  document.getElementById('rows').value = newRows;
+  document.getElementById('cols').value = newCols;
+}
+
+// Привязка кнопок
+document.getElementById('btn-top-plus').onclick = () => updateGrid(rows + 1, cols, 'add-top');
+document.getElementById('btn-bottom-plus').onclick = () => updateGrid(rows + 1, cols, 'add-bottom');
+document.getElementById('btn-left-plus').onclick = () => updateGrid(rows, cols + 1, 'add-left');
+document.getElementById('btn-right-plus').onclick = () => updateGrid(rows, cols + 1, 'add-right');
+
+document.getElementById('btn-top-minus').onclick = () => { if (rows > 1) updateGrid(rows - 1, cols, 'remove-top'); };
+document.getElementById('btn-bottom-minus').onclick = () => { if (rows > 1) updateGrid(rows - 1, cols, 'remove-bottom'); };
+document.getElementById('btn-left-minus').onclick = () => { if (cols > 1) updateGrid(rows, cols - 1, 'remove-left'); };
+document.getElementById('btn-right-minus').onclick = () => { if (cols > 1) updateGrid(rows, cols - 1, 'remove-right'); };
 
 // Сохранение PNG
 savePngBtn.addEventListener('click', async () => {
   const emptyCells = Array.from(grid.querySelectorAll('.cell:not(.word-cell)'));
   emptyCells.forEach(cell => cell.style.borderColor = 'transparent');
 
-  // временный контейнер с белым фоном
   const tempContainer = document.createElement('div');
   tempContainer.style.background = '#fff';
   tempContainer.style.display = 'inline-block';
   tempContainer.style.padding = '10px';
 
-  // клонируем grid
   const gridClone = grid.cloneNode(true);
-  gridClone.style.border = 'none'; // убираем рамку вокруг всего grid
+  gridClone.style.border = 'none';
   tempContainer.appendChild(gridClone);
 
-  // текст под grid
   if (includeLinkCheckbox.checked) {
     const footer = document.createElement('div');
     footer.style.width = '100%';
@@ -224,7 +339,7 @@ savePngBtn.addEventListener('click', async () => {
   }
 });
 
-// Сохранение .cross
+// Сохранение и загрузка .cross
 saveCrossBtn.addEventListener('click', () => {
   const cells = Array.from(grid.querySelectorAll('.cell'));
   const data = {
@@ -240,7 +355,6 @@ saveCrossBtn.addEventListener('click', () => {
   URL.revokeObjectURL(link.href);
 });
 
-// Загрузка .cross
 loadCrossBtn.addEventListener('click', () => {
   const inputFile = document.createElement('input');
   inputFile.type = 'file';
@@ -253,18 +367,9 @@ loadCrossBtn.addEventListener('click', () => {
       try {
         const data = JSON.parse(reader.result);
         if (!data.rows || !data.cols || !data.cells) throw new Error('Неверный формат файла');
-
-        // Обновляем поля ввода размеров
         document.getElementById('rows').value = data.rows;
         document.getElementById('cols').value = data.cols;
-
-        buildGrid(data.rows, data.cols);
-        const cells = Array.from(grid.querySelectorAll('.cell'));
-        data.cells.forEach((val, i) => {
-          const input = cells[i].querySelector('input');
-          input.value = val;
-          input.dispatchEvent(new Event('input'));
-        });
+        buildGrid(data.rows, data.cols, data.cells);
       } catch (err) {
         alert('Ошибка загрузки: ' + err);
       }
